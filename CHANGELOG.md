@@ -6,6 +6,8 @@ All notable changes to Touchwire are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-18
+
 ### Added
 
 - An app icon in the Liquid Glass style, made with Icon Composer. It follows the light, dark, clear and tinted icon
