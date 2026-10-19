@@ -29,7 +29,9 @@ echo "▸ Building Touchwire ${VERSION} (${BUILD}) from ${TAG}"
 VERSION="$VERSION" BUILD="$BUILD" "$SRC/Scripts/build.sh" > /dev/null
 APP="$SRC/build/Touchwire.app"
 codesign --verify --strict --deep "$APP"
-codesign -dv "$APP" 2>&1 | grep -q 'Authority=GGV' || fail "Not signed with GGV."
+# Captured first: with pipefail, `grep -q` closing the pipe early would fail codesign.
+SIGNATURE="$(codesign -dv "$APP" 2>&1)"
+[[ "$SIGNATURE" == *"Authority=GGV"* ]] || fail "Not signed with GGV."
 
 ZIP="$OUT/Touchwire-${VERSION}.zip"
 DMG="$OUT/Touchwire-${VERSION}.dmg"
