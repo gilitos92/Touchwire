@@ -4,6 +4,10 @@
 <dict>
 	<key>CFBundleExecutable</key>
 	<string>Touchwire</string>
+	<key>CFBundleIconFile</key>
+	<string>Touchwire</string>
+	<key>CFBundleIconName</key>
+	<string>Touchwire</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.ggv.Touchwire</string>
 	<key>CFBundleName</key>
