@@ -17,17 +17,22 @@ struct DisplayInfo: Hashable {
     }
 }
 
-/// Watches display connections. The displays present at start are the allowed set (the dummy HDMI plug).
+/// Watches display connections. A display is unknown when it isn't in the saved setup
+/// (or, before one is saved, wasn't connected at start).
 final class DisplayWatcher {
-    /// Called with displays that weren't in the allowed set, and whether the set is back to normal.
+    /// Called with the displays that aren't allowed, and every display connected now.
     var onChange: ((_ unknown: [DisplayInfo], _ current: [DisplayInfo]) -> Void)?
-    private(set) var allowed: Set<String> = []
+    var allowed: Set<String> = []
     private var lastReported: Set<String> = []
 
-    func start() {
+    var unknownDisplays: [DisplayInfo] { Self.currentDisplays().filter { !allowed.contains($0.key) } }
+
+    /// `allowed` nil means "whatever is connected now".
+    func start(allowed saved: Set<String>?) {
         let current = Self.currentDisplays()
-        allowed = Set(current.map(\.key))
-        EventLog.shared.write("display.baseline", ["displays": current.map(\.fields)])
+        allowed = saved ?? Set(current.map(\.key))
+        lastReported = Set(current.map(\.key))
+        EventLog.shared.write("display.started", ["displays": current.map(\.fields), "usingSavedSetup": saved != nil])
         CGDisplayRegisterReconfigurationCallback(displayCallback, Unmanaged.passUnretained(self).toOpaque())
     }
 

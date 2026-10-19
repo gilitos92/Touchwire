@@ -21,7 +21,7 @@ struct InputSample {
     var fields: [String: Any] {
         ["category": category.rawValue, "type": type.rawValue, "pid": sourcePID, "uid": sourceUserID,
          "stateID": sourceStateID, "keyboardType": keyboardType, "mouseSubtype": mouseSubtype,
-         "looksPhysical": looksPhysical]
+         "looksPhysical": looksPhysical, "process": processPath(sourcePID)]
     }
 }
 

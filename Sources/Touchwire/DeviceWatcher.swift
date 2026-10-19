@@ -1,7 +1,7 @@
 import Foundation
 import IOKit
 
-/// A device that appeared or disappeared after Touchwire started.
+/// A device that appeared or disappeared.
 struct DeviceChange {
     let added: Bool
     let family: String
@@ -13,15 +13,27 @@ struct DeviceChange {
         let transport = properties["Transport"].map { " (\($0))" } ?? ""
         return "\(name)\(transport)"
     }
+
+    /// Identity that survives replugging and restarts, unlike the registry ID.
+    var key: String {
+        let parts: [Any?] = [family, properties["VendorID"] ?? properties["idVendor"], properties["ProductID"] ?? properties["idProduct"],
+                             properties["SerialNumber"] ?? properties["USB Serial Number"], properties["Transport"],
+                             properties["Product"] ?? properties["USB Product Name"] ?? properties["IORegistryEntryName"]]
+        return parts.map { $0.map { "\($0)" } ?? "" }.joined(separator: "|")
+    }
 }
 
 /// Watches IOKit for USB, HID (USB and Bluetooth keyboards, mice and the like) and Thunderbolt devices.
-/// Everything present at start is the baseline; only later arrivals are reported as new.
+/// A device is unknown when it isn't in the saved setup (or, before one is saved, wasn't attached at start).
 final class DeviceWatcher {
     var onChange: ((DeviceChange) -> Void)?
-    /// Devices that arrived after start and are still attached.
-    private(set) var newDevices: [UInt64: DeviceChange] = [:]
-    private var baselineCount = 0
+    /// Every device attached now, by registry ID.
+    private(set) var attached: [UInt64: DeviceChange] = [:]
+    /// Device keys that count as normal.
+    var allowed: Set<String> = []
+
+    var unknownDevices: [DeviceChange] { attached.values.filter { !allowed.contains($0.key) } }
+    var currentKeys: Set<String> { Set(attached.values.map(\.key)) }
 
     private let families = ["IOUSBHostDevice", "IOHIDDevice", "IOThunderboltSwitch"]
     private var port: IONotificationPortRef?
@@ -38,7 +50,8 @@ final class DeviceWatcher {
         }
     }
 
-    func start() {
+    /// `allowed` nil means "whatever is attached now".
+    func start(allowed saved: Set<String>?) {
         guard let port = IONotificationPortCreate(kIOMainPortDefault) else { return }
         self.port = port
         CFRunLoopAddSource(CFRunLoopGetMain(), IONotificationPortGetRunLoopSource(port).takeUnretainedValue(), .commonModes)
@@ -55,12 +68,14 @@ final class DeviceWatcher {
                     continue
                 }
                 iterators.append(iterator)
-                // Draining the iterator arms the notification; what it holds now is the baseline.
+                // Draining the iterator arms the notification; what it holds now is already attached.
                 drain(iterator, context: context)
                 context.armed = true
             }
         }
-        EventLog.shared.write("device.started", ["baselineCount": baselineCount])
+        allowed = saved ?? currentKeys
+        EventLog.shared.write("device.started", ["attached": attached.count, "unknown": unknownDevices.map(\.label),
+                                                 "usingSavedSetup": saved != nil])
     }
 
     fileprivate func drain(_ iterator: io_iterator_t, context: Context) {
@@ -68,25 +83,22 @@ final class DeviceWatcher {
             defer { IOObjectRelease(service) }
             var registryID: UInt64 = 0
             IORegistryEntryGetRegistryEntryID(service, &registryID)
-            if !context.armed {
-                if context.added {
-                    baselineCount += 1
-                    EventLog.shared.write("device.baseline", ["family": context.family, "registryID": registryID,
-                                                              "properties": Self.properties(of: service)])
-                }
-                continue
-            }
             let change: DeviceChange
             if context.added {
                 change = DeviceChange(added: true, family: context.family, registryID: registryID, properties: Self.properties(of: service))
-                newDevices[registryID] = change
+                attached[registryID] = change
             } else {
                 // A terminated service has lost most properties; reuse what was captured on arrival.
-                let known = newDevices.removeValue(forKey: registryID)
+                let known = attached.removeValue(forKey: registryID)
                 change = DeviceChange(added: false, family: context.family, registryID: registryID, properties: known?.properties ?? [:])
             }
+            guard context.armed else {
+                EventLog.shared.write("device.present", ["family": change.family, "registryID": registryID, "properties": change.properties])
+                continue
+            }
             EventLog.shared.write(change.added ? "device.added" : "device.removed",
-                                  ["family": change.family, "registryID": registryID, "properties": change.properties])
+                                  ["family": change.family, "registryID": registryID, "properties": change.properties,
+                                   "known": allowed.contains(change.key)])
             onChange?(change)
         }
     }

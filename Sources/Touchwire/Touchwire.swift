@@ -26,8 +26,16 @@ final class Touchwire {
     private var remindedDisarmed = false
     private var timer: Timer?
     private var lastInputLog: [String: Date] = [:]
+    private var lastWouldLockLog: [String: Date] = [:]
+    /// The last software input source that wasn't this app, to check at unlock whether it's still running.
+    private var lastSoftwareInput: (pid: Int64, path: String, time: Date)?
 
     var inputMonitoringActive: Bool { input.isRunning }
+    var setupSavedAt: Date? { Setup.load()?.savedAt }
+    /// Devices and displays attached now that aren't in the saved setup.
+    var unknownNames: [String] {
+        Array(Set(devices.unknownDevices.map(\.label))).sorted() + displays.unknownDisplays.map { $0.name.isEmpty ? "Display \($0.key)" : $0.name }
+    }
 
     init(config: Config) {
         self.config = config
@@ -40,9 +48,10 @@ final class Touchwire {
         displays.onChange = { [weak self] unknown, _ in self?.handle(unknownDisplays: unknown) }
         session.onChange = { [weak self] in self?.handle(session: $0) }
 
+        let setup = Setup.load()
         _ = input.start()
-        devices.start()
-        displays.start()
+        devices.start(allowed: setup.map { Set($0.deviceKeys) })
+        displays.start(allowed: setup.map { Set($0.displayKeys) })
         session.start()
         timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in self?.tick() }
 
@@ -51,6 +60,26 @@ final class Touchwire {
         notifier.send(kind: "started", title: "Touchwire started",
                       message: config.watchOnly ? "Watch-only: it notifies but won't lock." : "Armed: it locks on physical contact.",
                       priority: "default", force: true)
+        // Something not in the saved setup may have been plugged in while Touchwire wasn't running.
+        if !unknownNames.isEmpty {
+            trip(kind: "device", reason: "Not in the saved setup: \(unknownNames.joined(separator: ", "))")
+        }
+    }
+
+    /// Makes everything attached now the normal setup.
+    func saveCurrentSetup() {
+        let current = DisplayWatcher.currentDisplays()
+        let setup = Setup(savedAt: Date(), deviceKeys: devices.currentKeys.sorted(), displayKeys: current.map(\.key).sorted(),
+                          deviceNames: Array(Set(devices.attached.values.map(\.label))).sorted(), displayNames: current.map(\.name))
+        do {
+            try setup.save()
+            devices.allowed = Set(setup.deviceKeys)
+            displays.allowed = Set(setup.displayKeys)
+            EventLog.shared.write("setup.saved", ["devices": setup.deviceNames, "displays": setup.displayNames])
+        } catch {
+            EventLog.shared.write("setup.save_failed", ["error": "\(error)"])
+        }
+        onStateChange?()
     }
 
     func reload(config: Config) {
@@ -83,7 +112,12 @@ final class Touchwire {
 
     private func handle(input sample: InputSample) {
         logSampled(sample)
-        guard sample.looksPhysical else { return }
+        guard sample.looksPhysical else {
+            if sample.sourcePID != Int64(getpid()) {
+                lastSoftwareInput = (sample.sourcePID, processPath(sample.sourcePID), Date())
+            }
+            return
+        }
         lastPhysicalInput = Date()
         if state == .armed {
             trip(kind: "input.\(sample.category.rawValue)", reason: "Physical \(sample.category.rawValue) input")
@@ -91,11 +125,12 @@ final class Touchwire {
     }
 
     private func handle(device change: DeviceChange) {
+        let known = devices.allowed.contains(change.key)
         if change.added {
-            if state == .armed || SessionWatcher.isLocked {
+            if !known && (state == .armed || SessionWatcher.isLocked) {
                 trip(kind: "device", reason: "New device: \(change.label)")
             }
-        } else if state == .disarmed && devices.newDevices.isEmpty {
+        } else if !known && state == .disarmed && devices.unknownDevices.isEmpty {
             arm(reason: "The added devices were unplugged.")
         }
     }
@@ -114,21 +149,30 @@ final class Touchwire {
             EventLog.shared.write("session.\(change.rawValue)", fields)
             return
         }
-        let viewers = ScreenSharing.activeConnections()
-        fields["screenSharingViewers"] = viewers
-        fields["classifiedAs"] = viewers.isEmpty ? "local" : "remote"
+        let remote = ScreenSharing.isActive
+        fields["screenSharing"] = ScreenSharing.snapshot
+        if let last = lastSoftwareInput {
+            fields["lastSoftwareInput"] = ["pid": last.pid, "path": last.path, "secondsAgo": Int(Date().timeIntervalSince(last.time)),
+                                           "stillRunning": !processPath(last.pid).isEmpty]
+        }
+        fields["classifiedAs"] = remote ? "remote" : "local"
         EventLog.shared.write("session.unlocked", fields)
-        if viewers.isEmpty {
-            disarm(reason: "Unlocked at the Mac.")
+        if remote {
+            arm(reason: "Unlocked through Screen Sharing.")
         } else {
-            arm(reason: "Unlocked through Screen Sharing (\(viewers.joined(separator: ", "))).")
+            disarm(reason: "Unlocked at the Mac.")
         }
     }
 
     private func trip(kind: String, reason: String) {
         lastTrip = reason
         if config.watchOnly {
-            EventLog.shared.write("trip.would_lock", ["kind": kind, "reason": reason])
+            // Mouse movement trips on every event; log each kind at most every 10 seconds.
+            let now = Date()
+            if now.timeIntervalSince(lastWouldLockLog[kind] ?? .distantPast) >= 10 {
+                lastWouldLockLog[kind] = now
+                EventLog.shared.write("trip.would_lock", ["kind": kind, "reason": reason])
+            }
             notifier.send(kind: kind, title: "Touchwire would lock", message: reason)
             onStateChange?()
             return
@@ -169,7 +213,7 @@ final class Touchwire {
         lastInputLog[signature] = now
         var fields = sample.fields
         fields["state"] = state.rawValue
-        fields["screenSharingActive"] = ScreenSharing.isActive
+        fields["screenSharing"] = ScreenSharing.snapshot
         EventLog.shared.write("input.sample", fields)
     }
 }

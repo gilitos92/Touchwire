@@ -33,10 +33,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(disabled("\(touchwire.state.rawValue.capitalized) since \(since) (\(mode))"))
         if let trip = touchwire.lastTrip { menu.addItem(disabled("Last trigger: \(trip)")) }
         if !touchwire.inputMonitoringActive { menu.addItem(disabled("Input Monitoring not granted")) }
+        if let saved = touchwire.setupSavedAt {
+            menu.addItem(disabled("Setup saved \(DateFormatter.localizedString(from: saved, dateStyle: .short, timeStyle: .short))"))
+        } else {
+            menu.addItem(disabled("No saved setup: using what was attached at start"))
+        }
+        for name in touchwire.unknownNames { menu.addItem(disabled("Not in setup: \(name)")) }
         menu.addItem(.separator())
         menu.addItem(action("Arm Now", #selector(armNow)))
         menu.addItem(action("Disarm", #selector(disarmNow)))
         menu.addItem(action("Lock Now", #selector(lockNow)))
+        menu.addItem(action("Save Current Setup as Normal", #selector(saveSetup)))
         menu.addItem(.separator())
         menu.addItem(action("Send Test Notification", #selector(testNotification)))
         menu.addItem(action("Reload Config", #selector(reloadConfig)))
@@ -60,6 +67,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func armNow() { touchwire.arm(reason: "Armed from the menu.") }
     @objc private func disarmNow() { touchwire.disarm(reason: "Disarmed from the menu.") }
     @objc private func lockNow() { Locker.lockNow() }
+    @objc private func saveSetup() { touchwire.saveCurrentSetup() }
     @objc private func testNotification() { touchwire.sendTestNotification() }
     @objc private func reloadConfig() { touchwire.reload(config: Config.load()) }
     @objc private func showLog() { NSWorkspace.shared.activateFileViewerSelecting([EventLog.shared.url]) }

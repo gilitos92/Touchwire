@@ -10,6 +10,9 @@ notification when someone touches it physically, and stays out of the way of sof
 - **Disarmed:** you're at the Mac. It re-arms after `rearmAfterIdleSeconds` without physical input, when the devices
   you plugged in are unplugged, or from the menu. It reminds you after `disarmedReminderSeconds`.
 
+A device or display is unknown when it isn't in the saved setup. **Save Current Setup as Normal** in the menu saves
+everything attached at that moment to `setup.json`. Until then, whatever was attached when Touchwire started counts.
+
 `watchOnly: true` (the default) logs and notifies "would lock" without locking, to check the triggers first.
 
 ## Install
@@ -25,4 +28,5 @@ menu after editing the config.
 ## Files
 
 - Config: `~/Library/Application Support/Touchwire/config.json`
+- Saved setup: `~/Library/Application Support/Touchwire/setup.json`
 - Log: `~/Library/Logs/Touchwire/events.jsonl` (one JSON event per line)

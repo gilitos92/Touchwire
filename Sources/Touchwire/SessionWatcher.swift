@@ -32,24 +32,50 @@ final class SessionWatcher {
 }
 
 /// Detects an active Screen Sharing or Remote Management viewer.
+///
+/// Two signals, both logged so the watch-only phase can show which one is reliable:
+/// an established connection to the VNC port (5900), and a running Screen Sharing session process.
 enum ScreenSharing {
-    /// Established TCP connections to the VNC port (5900), from `netstat`, which lists sockets of every user.
+    /// Always running, connected or not, so it says nothing about a viewer.
+    private static let idleProcesses: Set<String> = ["ScreenSharingSubscriber"]
+
+    /// Remote addresses connected to port 5900, from `netstat`, which lists sockets of every user.
     static func activeConnections() -> [String] {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/sbin/netstat")
-        process.arguments = ["-anp", "tcp"]
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = FileHandle.nullDevice
-        do { try process.run() } catch { return [] }
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        process.waitUntilExit()
-        return String(decoding: data, as: UTF8.self).split(separator: "\n").compactMap { line in
+        run("/usr/sbin/netstat", ["-anp", "tcp"]).split(separator: "\n").compactMap { line in
             let columns = line.split(separator: " ", omittingEmptySubsequences: true)
             guard columns.count >= 6, columns[5] == "ESTABLISHED", columns[3].hasSuffix(".5900") else { return nil }
             return "\(columns[4])"
         }
     }
 
-    static var isActive: Bool { !activeConnections().isEmpty }
+    /// Names of running Screen Sharing processes that only exist during a session.
+    static func sessionProcesses() -> [String] {
+        let names = run("/bin/ps", ["-axo", "comm="]).split(separator: "\n").map { ($0 as Substring).split(separator: "/").last.map(String.init) ?? "" }
+        return Array(Set(names.filter { $0.lowercased().contains("screensharing") && !idleProcesses.contains($0) })).sorted()
+    }
+
+    static var isActive: Bool { !activeConnections().isEmpty || !sessionProcesses().isEmpty }
+
+    static var snapshot: [String: Any] { ["connections": activeConnections(), "processes": sessionProcesses()] }
+
+    private static func run(_ path: String, _ arguments: [String]) -> String {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: path)
+        process.arguments = arguments
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = FileHandle.nullDevice
+        do { try process.run() } catch { return "" }
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        return String(decoding: data, as: UTF8.self)
+    }
+}
+
+/// Path of a running process's executable, or "" if it has exited.
+func processPath(_ pid: Int64) -> String {
+    guard pid > 0 else { return "" }
+    var buffer = [CChar](repeating: 0, count: 4096)
+    let length = proc_pidpath(Int32(pid), &buffer, UInt32(buffer.count))
+    return length > 0 ? String(cString: buffer) : ""
 }
