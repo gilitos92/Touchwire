@@ -38,12 +38,29 @@ After rebuilding the app, Settings shows "Running an older version"; click **Upd
 
 ## Install
 
+Download `Touchwire-<version>.dmg` from [Releases](https://github.com/gilitos92/Touchwire/releases) and drag Touchwire
+into Applications. It needs macOS 26 or later.
+
+Touchwire is self-signed, not notarized by Apple, so macOS blocks the first launch. Open it once, then go to
+System Settings → Privacy & Security, click **Open Anyway** next to the Touchwire message, and confirm.
+
+Then open **Settings…** from the menu bar icon and:
+
+1. Turn on **Start at login and keep running**.
+2. Grant **Input Monitoring**, and **Accessibility** to block input, then click **Restart Input Watch**.
+3. Set an ntfy topic (or click **New Random Topic**) and follow it in the [ntfy app](https://ntfy.sh/).
+4. Click **Save Current Setup as Normal** in the menu with only your own devices attached.
+5. Optionally install the **Protection Service**.
+6. When the alerts look right, turn on **Lock the Mac when triggered**.
+
+## Development
+
 ```sh
 ./Scripts/install.sh           # builds, installs to ~/Applications and starts the LaunchAgent
 ```
 
-Then allow Touchwire under System Settings → Privacy & Security → Input Monitoring (and Accessibility, to block input),
-and follow the ntfy topic shown in Settings in the [ntfy app](https://ntfy.sh/).
+Releases: tag `vX.Y.Z` on `main`, push the tag, then run `./Scripts/publish-release.sh`. It builds from the tag, signs
+with `GGV`, and publishes a zip and DMG with the changelog section as notes.
 
 ## Files
 

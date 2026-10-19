@@ -11,6 +11,7 @@ final class SettingsModel: ObservableObject {
     @Published var hasAccessibility = InputWatcher.hasAccessibility
     @Published var hasInputMonitoring = InputWatcher.hasInputMonitoring
     @Published var canBlock = false
+    @Published var startsAtLogin = LoginAgent.isInstalled
 
     let touchwire: Touchwire
 
@@ -26,6 +27,20 @@ final class SettingsModel: ObservableObject {
         hasAccessibility = InputWatcher.hasAccessibility
         hasInputMonitoring = InputWatcher.hasInputMonitoring
         canBlock = touchwire.inputCanBlock
+        startsAtLogin = LoginAgent.isInstalled
+    }
+
+    func setStartsAtLogin(_ on: Bool) {
+        do {
+            if on { try LoginAgent.enable() } else { try LoginAgent.disable() }
+        } catch {
+            serviceMessage = "Couldn't change Start at Login: \(error.localizedDescription)"
+        }
+        refresh()
+    }
+
+    func newTopic() {
+        config.ntfyTopic = "touchwire-" + (0..<12).map { _ in String(format: "%02x", UInt8.random(in: 0...255)) }.joined()
     }
 
     private func save() {
@@ -77,6 +92,13 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
+            Section("General") {
+                Toggle("Start at login and keep running", isOn: Binding(get: { model.startsAtLogin },
+                                                                       set: { model.setStartsAtLogin($0) }))
+                Text("Restarts Touchwire if it crashes or is killed, but not after Quit. Turning it off quits Touchwire.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
             Section("Protection") {
                 Toggle("Lock the Mac when triggered", isOn: Binding(get: { !model.config.watchOnly },
                                                                   set: { model.config.watchOnly = !$0 }))
@@ -102,7 +124,10 @@ struct SettingsView: View {
 
             Section("Notifications (ntfy)") {
                 TextField("Server", text: $model.config.ntfyServer)
-                TextField("Topic", text: $model.config.ntfyTopic)
+                HStack {
+                    TextField("Topic", text: $model.config.ntfyTopic)
+                    Button("New Random Topic") { model.newTopic() }
+                }
                 Text("Follow this topic in the ntfy app. Anyone with the topic can read the alerts.")
                     .font(.caption).foregroundStyle(.secondary)
                 Stepper("At most one alert per trigger every \(model.seconds(\.notifyCooldownSeconds, per: 60).wrappedValue) min",
