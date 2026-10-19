@@ -6,6 +6,8 @@ All notable changes to Touchwire are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-18
+
 ### Added
 
 - Menu bar app that keeps an always-unlocked Mac safe: physical keyboard or mouse input, a device that isn't in the
@@ -22,3 +24,6 @@ All notable changes to Touchwire are documented here. The format follows
 - Optional root protection service that watches devices while the app isn't running, restarts the app if it stops
   without Quit, and locks the Mac if it doesn't come back.
 - JSON event log, which can be turned off.
+
+[Unreleased]: https://github.com/gilitos92/Touchwire/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/gilitos92/Touchwire/releases/tag/v1.0.0
