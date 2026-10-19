@@ -10,6 +10,7 @@ All notable changes to Touchwire are documented here. The format follows
 
 - An app icon in the Liquid Glass style, made with Icon Composer. It follows the light, dark, clear and tinted icon
   appearances.
+- A license: GPL 3.0, with an added term that keeps the name and icon for the original project.
 
 ## [1.1.0] - 2026-10-18
 

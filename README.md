@@ -74,3 +74,13 @@ can't be updated.
 - Saved setup: `~/Library/Application Support/Touchwire/setup.json`
 - Log: `~/Library/Logs/Touchwire/events.jsonl` (one JSON event per line); the service logs to
   `/Library/Logs/Touchwire/daemon.jsonl`
+
+## License
+
+Copyright © 2026 Gilberto Valadez.
+
+This program is free software: you can redistribute it and/or modify it under the terms of the
+[GNU General Public License version 3](LICENSE), or (at your option) any later version. It comes with no warranty.
+
+**Additional term (GPL 3.0, section 7(e)):** the license grants no rights to the project's name, logo or icon.
+Modified versions must use a different name and icon, and must not suggest they come from this project or its author.
