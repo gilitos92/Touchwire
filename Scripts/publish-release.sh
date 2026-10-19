@@ -29,8 +29,8 @@ echo "▸ Building Touchwire ${VERSION} (${BUILD}) from ${TAG}"
 VERSION="$VERSION" BUILD="$BUILD" "$SRC/Scripts/build.sh" > /dev/null
 APP="$SRC/build/Touchwire.app"
 codesign --verify --strict --deep "$APP"
-# Captured first: with pipefail, `grep -q` closing the pipe early would fail codesign.
-SIGNATURE="$(codesign -dv "$APP" 2>&1)"
+# Captured first: with pipefail, `grep -q` closing the pipe early would fail codesign. Only --verbose=2 lists the signer.
+SIGNATURE="$(codesign -dv --verbose=2 "$APP" 2>&1)"
 [[ "$SIGNATURE" == *"Authority=GGV"* ]] || fail "Not signed with GGV."
 
 ZIP="$OUT/Touchwire-${VERSION}.zip"
