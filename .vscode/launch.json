@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Touchwire}",
+            "name": "Debug Touchwire",
+            "target": "Touchwire",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug Touchwire"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Touchwire}",
+            "name": "Release Touchwire",
+            "target": "Touchwire",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release Touchwire"
+        }
+    ]
+}

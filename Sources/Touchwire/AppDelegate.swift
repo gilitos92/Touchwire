@@ -4,6 +4,7 @@ import AppKit
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var touchwire: Touchwire!
     private var statusItem: NSStatusItem!
+    private var settings: SettingsWindowController!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         touchwire = Touchwire(config: Config.load())
@@ -11,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let menu = NSMenu()
         menu.delegate = self
         statusItem.menu = menu
+        settings = SettingsWindowController(touchwire: touchwire)
         touchwire.onStateChange = { [weak self] in self?.refreshIcon() }
         touchwire.start()
         refreshIcon()
@@ -46,9 +48,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(action("Lock Now", #selector(lockNow)))
         menu.addItem(action("Save Current Setup as Normal", #selector(saveSetup)))
         menu.addItem(.separator())
-        menu.addItem(action("Send Test Notification", #selector(testNotification)))
-        menu.addItem(action("Reload Config", #selector(reloadConfig)))
-        menu.addItem(action("Show Log in Finder", #selector(showLog)))
+        let settingsItem = action("Settings…", #selector(showSettings))
+        settingsItem.keyEquivalent = ","
+        menu.addItem(settingsItem)
         menu.addItem(.separator())
         menu.addItem(action("Quit Touchwire", #selector(quit)))
     }
@@ -93,11 +95,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func disarmNow() { touchwire.disarm(reason: "Disarmed from the menu.") }
     @objc private func lockNow() { Locker.lockNow() }
     @objc private func saveSetup() { touchwire.saveCurrentSetup() }
-    @objc private func testNotification() { touchwire.sendTestNotification() }
-    @objc private func reloadConfig() { touchwire.reload(config: Config.load()) }
-    @objc private func showLog() { NSWorkspace.shared.activateFileViewerSelecting([EventLog.shared.url]) }
+    @objc private func showSettings() { settings.show() }
     @objc private func quit() {
         EventLog.shared.write("touchwire.quit", ["source": "menu"])
+        // Tells the protection service this stop was intended, so it doesn't restart the app or lock the Mac.
+        FileManager.default.createFile(atPath: Config.quitMarkerURL.path, contents: Data())
         NSApp.terminate(nil)
     }
 }

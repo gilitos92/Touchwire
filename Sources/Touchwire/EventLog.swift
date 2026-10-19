@@ -5,19 +5,23 @@ import os
 final class EventLog {
     static let shared = EventLog()
 
-    let url: URL
+    private(set) var url: URL
+    /// Off stops all logging, to the file and to the unified log.
+    var enabled = true
     private let logger = Logger(subsystem: "com.ggv.Touchwire", category: "events")
     private let queue = DispatchQueue(label: "touchwire.eventlog")
     private let formatter = ISO8601DateFormatter()
 
     private init() {
-        let dir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/Touchwire", isDirectory: true)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        url = dir.appendingPathComponent("events.jsonl")
+        url = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/Touchwire/events.jsonl")
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
     }
 
+    /// The protection service logs to its own file.
+    func use(url: URL) { self.url = url }
+
     func write(_ event: String, _ fields: [String: Any] = [:]) {
+        guard enabled else { return }
         var record = fields
         record["event"] = event
         record["time"] = formatter.string(from: Date())
@@ -26,6 +30,7 @@ final class EventLog {
         logger.log("\(line, privacy: .public)")
         line += "\n"
         queue.async { [url] in
+            try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
             if let handle = try? FileHandle(forWritingTo: url) {
                 handle.seekToEndOfFile()
                 handle.write(Data(line.utf8))

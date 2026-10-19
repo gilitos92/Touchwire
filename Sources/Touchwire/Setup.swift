@@ -9,7 +9,7 @@ struct Setup: Codable {
     var deviceNames: [String]
     var displayNames: [String]
 
-    static let url = Config.directory.appendingPathComponent("setup.json")
+    static var url: URL { Config.directory.appendingPathComponent("setup.json") }
 
     static func load() -> Setup? {
         guard let data = try? Data(contentsOf: url) else { return nil }

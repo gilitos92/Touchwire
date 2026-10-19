@@ -8,6 +8,7 @@ import Foundation
 ///   unplugged, or from the menu.
 ///
 /// In watch-only mode a trip only logs and notifies "would lock"; the state stays armed.
+/// With `blockFirstInput`, the physical input that trips it is dropped until the lock screen is up.
 final class Touchwire {
     enum State: String { case armed, tripped, disarmed }
 
@@ -29,8 +30,11 @@ final class Touchwire {
     private var lastWouldLockLog: [String: Date] = [:]
     /// The last software input source that wasn't this app, to check at unlock whether it's still running.
     private var lastSoftwareInput: (pid: Int64, path: String, time: Date)?
+    /// Physical input is dropped until this time, or until the lock screen is up, whichever comes first.
+    private var blockUntil = Date.distantPast
 
     var inputMonitoringActive: Bool { input.isRunning }
+    var inputCanBlock: Bool { input.canBlock }
     var setupSavedAt: Date? { Setup.load()?.savedAt }
     /// Devices and displays attached now that aren't in the saved setup.
     var unknownNames: [String] {
@@ -44,18 +48,21 @@ final class Touchwire {
 
     func start() {
         input.onInput = { [weak self] in self?.handle(input: $0) }
+        input.shouldBlock = { [weak self] in self?.shouldBlock($0) ?? false }
+        EventLog.shared.enabled = config.loggingEnabled
+        try? FileManager.default.removeItem(at: Config.quitMarkerURL)
         devices.onChange = { [weak self] in self?.handle(device: $0) }
         displays.onChange = { [weak self] unknown, _ in self?.handle(unknownDisplays: unknown) }
         session.onChange = { [weak self] in self?.handle(session: $0) }
 
         let setup = Setup.load()
-        _ = input.start()
+        input.start()
         devices.start(allowed: setup.map { Set($0.deviceKeys) })
         displays.start(allowed: setup.map { Set($0.displayKeys) })
         session.start()
         timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in self?.tick() }
 
-        EventLog.shared.write("touchwire.started", ["watchOnly": config.watchOnly, "inputMonitoring": input.isRunning,
+        EventLog.shared.write("touchwire.started", ["watchOnly": config.watchOnly, "inputMonitoring": input.isRunning, "canBlock": input.canBlock,
                                                    "lockAvailable": Locker.isAvailable, "locked": SessionWatcher.isLocked])
         notifier.send(kind: "started", title: "Touchwire started",
                       message: config.watchOnly ? "Watch-only: it notifies but won't lock." : "Armed: it locks on physical contact.",
@@ -106,10 +113,18 @@ final class Touchwire {
         onStateChange?()
     }
 
-    func reload(config: Config) {
+    func apply(config: Config) {
+        guard config != self.config else { return }
         self.config = config
         notifier.update(config: config)
-        EventLog.shared.write("config.reloaded", ["watchOnly": config.watchOnly])
+        EventLog.shared.enabled = config.loggingEnabled
+        EventLog.shared.write("config.applied", ["watchOnly": config.watchOnly, "blockFirstInput": config.blockFirstInput])
+        onStateChange?()
+    }
+
+    /// Recreates the event tap, for example after Accessibility or Input Monitoring is granted.
+    func restartInput() {
+        input.start()
         onStateChange?()
     }
 
@@ -143,9 +158,14 @@ final class Touchwire {
             return
         }
         lastPhysicalInput = Date()
-        if state == .armed {
-            trip(kind: "input.\(sample.category.rawValue)", reason: "Physical \(sample.category.rawValue) input")
+        guard state == .armed else { return }
+        if SessionWatcher.isLocked {
+            // Someone at the lock screen; typing the password there is how you disarm, so don't lock again.
+            notifier.send(kind: "lockscreen", title: "Someone is at the lock screen",
+                          message: "Physical \(sample.category.rawValue) input while the Mac is locked.")
+            return
         }
+        trip(kind: "input.\(sample.category.rawValue)", reason: "Physical \(sample.category.rawValue) input")
     }
 
     private func handle(device change: DeviceChange) {
@@ -206,9 +226,25 @@ final class Touchwire {
             return
         }
         EventLog.shared.write("trip.locked", ["kind": kind, "reason": reason])
-        Locker.lockNow()
+        if config.blockFirstInput { blockUntil = Date().addingTimeInterval(3) }
+        if !Locker.lockNow() {
+            // Never leave the keyboard dead without a lock screen to type into.
+            blockUntil = .distantPast
+            notifier.send(kind: "lockfailed", title: "Touchwire couldn't lock the Mac", message: reason, priority: "urgent", force: true)
+        }
         state = .tripped
         notifier.send(kind: kind, title: "Touchwire locked the Mac", message: reason, priority: "urgent", force: true)
+    }
+
+    /// Called for every event while the tap can block. Only physical input is ever dropped.
+    private func shouldBlock(_ sample: InputSample) -> Bool {
+        guard sample.looksPhysical, Date() < blockUntil else { return false }
+        // The lock screen needs the keyboard for the password.
+        if SessionWatcher.isLocked {
+            blockUntil = .distantPast
+            return false
+        }
+        return true
     }
 
     private func tick() {

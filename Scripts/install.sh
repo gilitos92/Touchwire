@@ -1,5 +1,6 @@
 #!/bin/zsh
-# Installs Touchwire into ~/Applications and starts it as a LaunchAgent that restarts if it quits or is killed.
+# Installs Touchwire into ~/Applications and starts it as a LaunchAgent. It restarts if it crashes or is killed,
+# but stays quit after Quit in its menu.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 LABEL=com.ggv.Touchwire
@@ -8,6 +9,9 @@ PLIST=~/Library/LaunchAgents/$LABEL.plist
 CONFIG_DIR=~/Library/Application\ Support/Touchwire
 
 ./Scripts/build.sh
+mkdir -p "$CONFIG_DIR"
+# Marks the stop as intended, so the protection service doesn't restart the app or lock the Mac. The app clears it.
+touch "$CONFIG_DIR/quit-requested"
 launchctl bootout gui/$(id -u)/$LABEL 2>/dev/null || true
 mkdir -p ~/Applications ~/Library/LaunchAgents "$CONFIG_DIR"
 rm -rf "$APP_DIR"
@@ -45,7 +49,10 @@ cat > "$PLIST" <<PLIST
 	<key>RunAtLoad</key>
 	<true/>
 	<key>KeepAlive</key>
-	<true/>
+	<dict>
+		<key>SuccessfulExit</key>
+		<false/>
+	</dict>
 	<key>ProcessType</key>
 	<string>Interactive</string>
 </dict>
