@@ -4,6 +4,10 @@
 <dict>
 	<key>CFBundleExecutable</key>
 	<string>Touchwire</string>
+	<key>CFBundleIconFile</key>
+	<string>Touchwire</string>
+	<key>CFBundleIconName</key>
+	<string>Touchwire</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.ggv.Touchwire</string>
 	<key>CFBundleName</key>
@@ -11,13 +15,15 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.1.0</string>
+	<string>1.2.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>26.0</string>
 	<key>LSUIElement</key>
 	<true/>
+	<key>NSHumanReadableCopyright</key>
+	<string>Copyright © 2026 Gilberto Valadez. Licensed under the GNU GPL version 3.</string>
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
 	<key>SUFeedURL</key>
