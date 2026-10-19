@@ -6,6 +6,19 @@ All notable changes to Touchwire are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-18
+
+### Added
+
+- Automatic updates through [Sparkle](https://sparkle-project.org/): **Check for Updates…** in the menu, and
+  **Check for updates automatically** and the app version in Settings. Updates are verified with an EdDSA signature.
+- A copy opened outside the login agent (after an update, or by double-clicking) hands over to the agent, so Touchwire
+  keeps restarting after crashes.
+
+### Fixed
+
+- The release script's signature check, which failed on every build.
+
 ## [1.0.0] - 2026-10-18
 
 ### Added
@@ -25,5 +38,6 @@ All notable changes to Touchwire are documented here. The format follows
   without Quit, and locks the Mac if it doesn't come back.
 - JSON event log, which can be turned off.
 
-[Unreleased]: https://github.com/gilitos92/Touchwire/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/gilitos92/Touchwire/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/gilitos92/Touchwire/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/gilitos92/Touchwire/releases/tag/v1.0.0

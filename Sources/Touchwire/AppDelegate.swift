@@ -7,6 +7,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var settings: SettingsWindowController!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        if LoginAgent.handOverIfNeeded() {
+            NSApp.terminate(nil)
+            return
+        }
+        _ = Updater.shared
         touchwire = Touchwire(config: Config.load())
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         let menu = NSMenu()
@@ -48,6 +53,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(action("Lock Now", #selector(lockNow)))
         menu.addItem(action("Save Current Setup as Normal", #selector(saveSetup)))
         menu.addItem(.separator())
+        let updateItem = action("Check for Updates…", #selector(checkForUpdates))
+        updateItem.isEnabled = Updater.shared.canCheck
+        menu.addItem(updateItem)
         let settingsItem = action("Settings…", #selector(showSettings))
         settingsItem.keyEquivalent = ","
         menu.addItem(settingsItem)
@@ -96,6 +104,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func lockNow() { Locker.lockNow() }
     @objc private func saveSetup() { touchwire.saveCurrentSetup() }
     @objc private func showSettings() { settings.show() }
+    @objc private func checkForUpdates() { Updater.shared.checkForUpdates() }
     @objc private func quit() {
         EventLog.shared.write("touchwire.quit", ["source": "menu"])
         // Tells the protection service this stop was intended, so it doesn't restart the app or lock the Mac.

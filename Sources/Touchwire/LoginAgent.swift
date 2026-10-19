@@ -37,6 +37,18 @@ enum LoginAgent {
         if !isRunningUnderAgent { NSApp.terminate(nil) }
     }
 
+    /// A copy opened outside the agent (Sparkle's relaunch after an update, or a double-click) asks launchd to start
+    /// the agent's copy instead, so restart-on-crash keeps working. Returns `true` when this copy should quit.
+    static func handOverIfNeeded() -> Bool {
+        guard isInstalled, !isRunningUnderAgent else { return false }
+        EventLog.shared.write("loginagent.handover")
+        let domain = "gui/\(getuid())"
+        // Loads the agent if it was removed from launchd, then starts it if it isn't running.
+        ProtectionService.run("/bin/launchctl", ["bootstrap", domain, plistURL.path])
+        ProtectionService.run("/bin/launchctl", ["kickstart", "\(domain)/\(ProtectionService.agentLabel)"])
+        return true
+    }
+
     /// Removes the agent. If this process runs under it, launchd stops it, so Touchwire quits.
     static func disable() throws {
         FileManager.default.createFile(atPath: Config.quitMarkerURL.path, contents: Data())
