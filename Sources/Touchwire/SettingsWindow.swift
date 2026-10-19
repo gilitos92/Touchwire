@@ -12,6 +12,7 @@ final class SettingsModel: ObservableObject {
     @Published var hasInputMonitoring = InputWatcher.hasInputMonitoring
     @Published var canBlock = false
     @Published var startsAtLogin = LoginAgent.isInstalled
+    @Published var checksForUpdates = Updater.shared.automaticallyChecks
 
     let touchwire: Touchwire
 
@@ -97,6 +98,14 @@ struct SettingsView: View {
                                                                        set: { model.setStartsAtLogin($0) }))
                 Text("Restarts Touchwire if it crashes or is killed, but not after Quit. Turning it off quits Touchwire.")
                     .font(.caption).foregroundStyle(.secondary)
+                HStack {
+                    Toggle("Check for updates automatically", isOn: Binding(get: { model.checksForUpdates },
+                                                                           set: { Updater.shared.automaticallyChecks = $0
+                                                                                  model.checksForUpdates = $0 }))
+                    Spacer()
+                    Button("Check Now") { Updater.shared.checkForUpdates() }
+                }
+                LabeledContent("Version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?")
             }
 
             Section("Protection") {

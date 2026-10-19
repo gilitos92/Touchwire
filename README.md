@@ -53,6 +53,10 @@ Then open **Settings…** from the menu bar icon and:
 5. Optionally install the **Protection Service**.
 6. When the alerts look right, turn on **Lock the Mac when triggered**.
 
+Touchwire updates itself through Sparkle (**Check for Updates…** in the menu). After an update, open Settings and click
+**Update…** under Protection Service if it's installed, since the root copy only changes with an administrator
+password.
+
 ## Development
 
 ```sh
@@ -60,7 +64,9 @@ Then open **Settings…** from the menu bar icon and:
 ```
 
 Releases: tag `vX.Y.Z` on `main`, push the tag, then run `./Scripts/publish-release.sh`. It builds from the tag, signs
-with `GGV`, and publishes a zip and DMG with the changelog section as notes.
+with `GGV`, and publishes a zip, a DMG and a Sparkle `appcast.xml` with the changelog section as notes.
+The appcast is signed with the EdDSA key in the login keychain (account `Touchwire`); without that key, installed copies
+can't be updated.
 
 ## Files
 

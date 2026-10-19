@@ -18,5 +18,11 @@
 	<string>26.0</string>
 	<key>LSUIElement</key>
 	<true/>
+	<key>SUFeedURL</key>
+	<string>https://github.com/gilitos92/Touchwire/releases/latest/download/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>PdtjNvca/un0I+FPdr4zrmJf6dbxmYGCuz5sZaoG5Ag=</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
 </dict>
 </plist>

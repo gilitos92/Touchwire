@@ -1,5 +1,7 @@
 #!/bin/zsh
-# Builds the tagged version and publishes it as a GitHub release with a signed zip and DMG.
+# Builds the tagged version and publishes it as a GitHub release with a signed zip and DMG, plus the Sparkle
+# appcast.xml that installed copies check for updates. The appcast is signed with the EdDSA key stored in the login
+# keychain under the account "Touchwire" (Sparkle's generate_keys created it).
 # Usage: publish-release.sh [version]   (defaults to Info.plist's CFBundleShortVersionString)
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -43,6 +45,16 @@ cp -R "$APP" "$OUT/stage/"
 ln -s /Applications "$OUT/stage/Applications"
 diskutil image create from "$OUT/stage" --format UDZO --volumeName "Touchwire" "$DMG" > /dev/null 2>&1
 
+echo "▸ Signing the appcast"
+GENERATE_APPCAST=$(find "$SRC/.build/artifacts/sparkle" -name generate_appcast -type f | head -1)
+[[ -n "$GENERATE_APPCAST" ]] || fail "generate_appcast not found."
+mkdir "$OUT/appcast"
+cp "$ZIP" "$OUT/appcast/"
+"$GENERATE_APPCAST" --account Touchwire --download-url-prefix "https://github.com/${REPO}/releases/download/${TAG}/" \
+    --maximum-versions 1 "$OUT/appcast" > /dev/null
+APPCAST="$OUT/appcast/appcast.xml"
+grep -q 'sparkle:edSignature' "$APPCAST" || fail "The appcast has no EdDSA signature."
+
 NOTES="$OUT/notes.md"
 awk -v head="## [${VERSION}]" '
     index($0, head) == 1 { found = 1; next }
@@ -57,10 +69,10 @@ cat >> "$NOTES" << NOTES
 Download \`Touchwire-${VERSION}.dmg\` and drag Touchwire into Applications. It needs macOS 26 or later.
 The app is self-signed, not notarized by Apple, so macOS blocks the first launch; the
 [README](https://github.com/${REPO}#install) shows how to open it. Then turn on **Start at login and keep running**
-in Settings.
+in Settings. Later versions install themselves through **Check for Updates…**.
 NOTES
 
 echo "▸ Publishing ${TAG}"
 gh release create "$TAG" --repo "$REPO" --target "$COMMIT" \
-    --title "Touchwire ${VERSION}" --notes-file "$NOTES" "$ZIP" "$DMG"
+    --title "Touchwire ${VERSION}" --notes-file "$NOTES" "$ZIP" "$DMG" "$APPCAST"
 echo "✓ https://github.com/${REPO}/releases/tag/${TAG}"

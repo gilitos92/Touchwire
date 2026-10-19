@@ -6,6 +6,17 @@ All notable changes to Touchwire are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Automatic updates through [Sparkle](https://sparkle-project.org/): **Check for Updates…** in the menu, and
+  **Check for updates automatically** and the app version in Settings. Updates are verified with an EdDSA signature.
+- A copy opened outside the login agent (after an update, or by double-clicking) hands over to the agent, so Touchwire
+  keeps restarting after crashes.
+
+### Fixed
+
+- The release script's signature check, which failed on every build.
+
 ## [1.0.0] - 2026-10-18
 
 ### Added
