@@ -66,6 +66,30 @@ final class Touchwire {
         }
     }
 
+    /// Everything that counts as normal, by name, and whether it's attached now.
+    var savedEntries: [(name: String, attached: Bool)] {
+        let attachedDevices = devices.currentKeys
+        var entries: [String: Bool] = [:]
+        for key in devices.allowed {
+            // A device has several entries (USB and HID); it's attached if any of them is.
+            let name = Self.deviceName(fromKey: key)
+            entries[name] = (entries[name] ?? false) || attachedDevices.contains(key)
+        }
+        let connected = DisplayWatcher.currentDisplays()
+        for key in displays.allowed {
+            let display = connected.first { $0.key == key }
+            entries[display.map { "\($0.name) (display)" } ?? "Display \(key)"] = display != nil
+        }
+        return entries.map { ($0.key, $0.value) }.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+    }
+
+    /// `DeviceChange.key` ends with transport and name; show them like `DeviceChange.label`.
+    private static func deviceName(fromKey key: String) -> String {
+        let parts = key.split(separator: "|", omittingEmptySubsequences: false)
+        guard parts.count >= 6 else { return key }
+        return parts[4].isEmpty ? String(parts[5]) : "\(parts[5]) (\(parts[4]))"
+    }
+
     /// Makes everything attached now the normal setup.
     func saveCurrentSetup() {
         let current = DisplayWatcher.currentDisplays()

@@ -39,6 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             menu.addItem(disabled("No saved setup: using what was attached at start"))
         }
         for name in touchwire.unknownNames { menu.addItem(disabled("Not in setup: \(name)")) }
+        menu.addItem(devicesItem())
         menu.addItem(.separator())
         menu.addItem(action("Arm Now", #selector(armNow)))
         menu.addItem(action("Disarm", #selector(disarmNow)))
@@ -50,6 +51,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(action("Show Log in Finder", #selector(showLog)))
         menu.addItem(.separator())
         menu.addItem(action("Quit Touchwire", #selector(quit)))
+    }
+
+    /// Submenu of the saved setup (checked when attached) and of what's attached but not saved.
+    private func devicesItem() -> NSMenuItem {
+        let saved = touchwire.savedEntries
+        let unsaved = touchwire.unknownNames
+        let submenu = NSMenu()
+        submenu.addItem(disabled(touchwire.setupSavedAt == nil ? "Normal (attached at start)" : "Saved as normal"))
+        for entry in saved {
+            let item = disabled(entry.attached ? entry.name : "\(entry.name) (not attached)")
+            item.state = entry.attached ? .on : .off
+            item.indentationLevel = 1
+            submenu.addItem(item)
+        }
+        submenu.addItem(.separator())
+        submenu.addItem(disabled(unsaved.isEmpty ? "Not saved: none" : "Not saved (Save Current Setup adds these)"))
+        for name in unsaved {
+            let item = disabled(name)
+            item.indentationLevel = 1
+            submenu.addItem(item)
+        }
+        let item = NSMenuItem(title: "Devices (\(saved.count) normal, \(unsaved.count) not saved)", action: nil, keyEquivalent: "")
+        item.submenu = submenu
+        return item
     }
 
     private func disabled(_ title: String) -> NSMenuItem {

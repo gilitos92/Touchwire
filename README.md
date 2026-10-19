@@ -12,6 +12,7 @@ notification when someone touches it physically, and stays out of the way of sof
 
 A device or display is unknown when it isn't in the saved setup. **Save Current Setup as Normal** in the menu saves
 everything attached at that moment to `setup.json`. Until then, whatever was attached when Touchwire started counts.
+The **Devices** submenu lists the normal setup (checked when attached) and what is attached but not saved.
 
 `watchOnly: true` (the default) logs and notifies "would lock" without locking, to check the triggers first.
 
