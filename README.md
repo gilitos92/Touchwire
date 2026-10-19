@@ -6,7 +6,7 @@ notification when someone touches it physically, and stays out of the way of sof
 ## States
 
 - **Armed:** physical keyboard or mouse input, a new USB, HID or Thunderbolt device, or an unknown display trips it.
-- **Tripped:** the Mac is locked. Unlocking at the Mac disarms it; unlocking through Screen Sharing re-arms it.
+- **Tripped:** the Mac is locked. Unlocking at the Mac disarms it; unlocking through Screen Sharing (detected by its `screensharingd` and `ScreensharingAgent` processes) re-arms it.
 - **Disarmed:** you're at the Mac. It re-arms after `rearmAfterIdleSeconds` without physical input, when the devices
   you plugged in are unplugged, or from the menu. It reminds you after `disarmedReminderSeconds`.
 

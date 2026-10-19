@@ -150,7 +150,7 @@ final class Touchwire {
             return
         }
         let remote = ScreenSharing.isActive
-        fields["screenSharing"] = ScreenSharing.snapshot
+        fields["screenSharing"] = ScreenSharing.sessionProcesses()
         if let last = lastSoftwareInput {
             fields["lastSoftwareInput"] = ["pid": last.pid, "path": last.path, "secondsAgo": Int(Date().timeIntervalSince(last.time)),
                                            "stillRunning": !processPath(last.pid).isEmpty]
@@ -213,7 +213,7 @@ final class Touchwire {
         lastInputLog[signature] = now
         var fields = sample.fields
         fields["state"] = state.rawValue
-        fields["screenSharing"] = ScreenSharing.snapshot
+        fields["screenSharing"] = ScreenSharing.sessionProcesses()
         EventLog.shared.write("input.sample", fields)
     }
 }

@@ -31,22 +31,12 @@ final class SessionWatcher {
     }
 }
 
-/// Detects an active Screen Sharing or Remote Management viewer.
-///
-/// Two signals, both logged so the watch-only phase can show which one is reliable:
-/// an established connection to the VNC port (5900), and a running Screen Sharing session process.
+/// Detects an active Screen Sharing or Remote Management viewer by its session processes
+/// (`screensharingd` and `ScreensharingAgent`), which run only while someone is connected.
+/// Tested on macOS 27.0.1: a TCP check on port 5900 found nothing during a live session, so it isn't used.
 enum ScreenSharing {
     /// Always running, connected or not, so it says nothing about a viewer.
     private static let idleProcesses: Set<String> = ["ScreenSharingSubscriber"]
-
-    /// Remote addresses connected to port 5900, from `netstat`, which lists sockets of every user.
-    static func activeConnections() -> [String] {
-        run("/usr/sbin/netstat", ["-anp", "tcp"]).split(separator: "\n").compactMap { line in
-            let columns = line.split(separator: " ", omittingEmptySubsequences: true)
-            guard columns.count >= 6, columns[5] == "ESTABLISHED", columns[3].hasSuffix(".5900") else { return nil }
-            return "\(columns[4])"
-        }
-    }
 
     /// Names of running Screen Sharing processes that only exist during a session.
     static func sessionProcesses() -> [String] {
@@ -54,9 +44,7 @@ enum ScreenSharing {
         return Array(Set(names.filter { $0.lowercased().contains("screensharing") && !idleProcesses.contains($0) })).sorted()
     }
 
-    static var isActive: Bool { !activeConnections().isEmpty || !sessionProcesses().isEmpty }
-
-    static var snapshot: [String: Any] { ["connections": activeConnections(), "processes": sessionProcesses()] }
+    static var isActive: Bool { !sessionProcesses().isEmpty }
 
     private static func run(_ path: String, _ arguments: [String]) -> String {
         let process = Process()
