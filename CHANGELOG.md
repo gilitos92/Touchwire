@@ -6,6 +6,8 @@ All notable changes to Touchwire are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-11-03
+
 ### Added
 
 - A Buy Me a Coffee button in the README and a GitHub Sponsor button, for anyone who wants to support the project.
