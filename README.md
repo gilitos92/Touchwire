@@ -3,6 +3,12 @@
 Keeps an always-unlocked Mac mini safe enough to leave unlocked for remote agents. It locks the Mac and sends a push
 notification when someone touches it physically, and stays out of the way of software input (cua-driver, Screen Sharing).
 
+<a href="https://www.buymeacoffee.com/gilitos92">
+  <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy me a coffee" width="217" height="60" />
+</a>
+
+If Touchwire keeps your Mac safe while you're away, a coffee is always appreciated. Entirely optional.
+
 ## States
 
 - **Armed:** physical keyboard or mouse input, a new USB, HID or Thunderbolt device, or an unknown display trips it.
