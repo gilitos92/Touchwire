@@ -47,8 +47,7 @@ After rebuilding the app, Settings shows "Running an older version"; click **Upd
 Download `Touchwire-<version>.dmg` from [Releases](https://github.com/gilitos92/Touchwire/releases) and drag Touchwire
 into Applications. It needs macOS 26 or later.
 
-Touchwire is self-signed, not notarized by Apple, so macOS blocks the first launch. Open it once, then go to
-System Settings → Privacy & Security, click **Open Anyway** next to the Touchwire message, and confirm.
+Touchwire is signed with a Developer ID and notarized by Apple, so it opens without a Gatekeeper warning.
 
 Then open **Settings…** from the menu bar icon and:
 
@@ -63,16 +62,28 @@ Touchwire updates itself through Sparkle (**Check for Updates…** in the menu).
 **Update…** under Protection Service if it's installed, since the root copy only changes with an administrator
 password.
 
+Versions up to 1.2.1 were self-signed. Because the first Developer ID version has a different signature, macOS no
+longer matches it to the old **Input Monitoring** and **Accessibility** grants. After that update, remove Touchwire
+from both lists in System Settings → Privacy & Security, grant them again, click **Restart Input Watch**, and click
+**Update…** under Protection Service if it's installed.
+
 ## Development
 
 ```sh
 ./Scripts/install.sh           # builds, installs to ~/Applications and starts the LaunchAgent
 ```
 
+Builds are signed with the Developer ID Application certificate of team `GC28C3K5G9` from the keychain, with a secure
+timestamp, so building needs the network. On a Mac without it, set `SIGN_IDENTITY` to another identity (`-` signs
+ad-hoc); such builds get `Resources/Touchwire.entitlements` so Sparkle still loads.
+
 Releases: tag `vX.Y.Z` on `main`, push the tag, then run `./Scripts/publish-release.sh`. It builds from the tag, signs
-with `GGV`, and publishes a zip, a DMG and a Sparkle `appcast.xml` with the changelog section as notes.
+with the Developer ID, has Apple notarize the app and the DMG, staples both, checks that Gatekeeper accepts them, and
+publishes a zip, a DMG and a Sparkle `appcast.xml` with the changelog section as notes. Notarization uses the notarytool
+keychain profile named by `NOTARY_PROFILE`, in the environment or in `~/.config/touchwire/release.env`.
 The appcast is signed with the EdDSA key in the login keychain (account `Touchwire`); without that key, installed copies
-can't be updated.
+can't be updated. Never change that key and the signing certificate in the same release: Sparkle accepts an update when
+either one matches the installed app.
 
 ## Files
 

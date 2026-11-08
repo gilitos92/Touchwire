@@ -6,6 +6,14 @@ All notable changes to Touchwire are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-11-08
+
+### Changed
+
+- Touchwire is now signed with a Developer ID and notarized by Apple, so it opens without a Gatekeeper warning.
+  Because the signature changed, the old **Input Monitoring** and **Accessibility** grants no longer apply: remove
+  Touchwire from both lists and grant them again, then click **Update…** under Protection Service if it's installed.
+
 ## [1.2.1] - 2026-11-03
 
 ### Added
@@ -52,6 +60,9 @@ All notable changes to Touchwire are documented here. The format follows
   without Quit, and locks the Mac if it doesn't come back.
 - JSON event log, which can be turned off.
 
-[Unreleased]: https://github.com/gilitos92/Touchwire/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/gilitos92/Touchwire/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/gilitos92/Touchwire/compare/v1.2.1...v1.3.0
+[1.2.1]: https://github.com/gilitos92/Touchwire/compare/v1.2.0...v1.2.1
+[1.2.0]: https://github.com/gilitos92/Touchwire/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/gilitos92/Touchwire/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/gilitos92/Touchwire/releases/tag/v1.0.0
