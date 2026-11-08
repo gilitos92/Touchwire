@@ -1,8 +1,15 @@
 #!/bin/zsh
-# Builds build/Touchwire.app with Sparkle embedded, and signs it with the stable self-signed identity.
-# VERSION and BUILD override Info.plist.
+# Builds build/Touchwire.app with Sparkle embedded, and signs it with the Developer ID Application identity of team
+# GC28C3K5G9. VERSION and BUILD override Info.plist. SIGN_IDENTITY overrides the identity (a SHA-1 or a certificate
+# name), for a Mac without the Developer ID; "-" signs ad-hoc.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+source Scripts/signing-identity.sh
+SIGN_IDENTITY="${SIGN_IDENTITY:-$(find_developer_id_identity)}"
+[[ -n "$SIGN_IDENTITY" ]] || {
+    echo "✗ No Developer ID Application identity for team ${TEAM_ID} in the keychain. Set SIGN_IDENTITY to sign with another one." >&2
+    exit 1
+}
 swift build -c release
 APP=build/Touchwire.app
 EXECUTABLE="$APP/Contents/MacOS/Touchwire"
@@ -24,11 +31,18 @@ SPARKLE=$(find .build/artifacts/sparkle -type d -name Sparkle.framework -path '*
 cp -R "$SPARKLE" "$APP/Contents/Frameworks/"
 install_name_tool -add_rpath "@executable_path/../Frameworks" "$EXECUTABLE" 2>/dev/null || true
 
-# Sign inside-out, Sparkle's helpers first. The entitlement lets the hardened runtime load Sparkle without a Team ID.
-SIGN=(--force --options runtime --sign "GGV" --entitlements Resources/Touchwire.entitlements)
+# Sign inside-out, Sparkle's helpers first, always with the hardened runtime. A Developer ID signature gets the secure
+# timestamp that notarization needs (so it needs the network) and no entitlements, because Sparkle carries the same
+# Team ID. Any other identity has no Team ID, so it needs the entitlement for the hardened runtime to load Sparkle.
+SIGN=(--force --options runtime --sign "$SIGN_IDENTITY")
+if is_developer_id_identity "$SIGN_IDENTITY"; then
+    SIGN+=(--timestamp)
+else
+    SIGN+=(--entitlements Resources/Touchwire.entitlements)
+fi
 B="$APP/Contents/Frameworks/Sparkle.framework/Versions/B"
 for xpc in "$B/XPCServices/"*.xpc; do codesign "${SIGN[@]}" "$xpc"; done
 codesign "${SIGN[@]}" "$B/Autoupdate" "$B/Updater.app" "$APP/Contents/Frameworks/Sparkle.framework"
 codesign "${SIGN[@]}" "$APP"
 codesign --verify --strict --deep "$APP"
-echo "Built $APP"
+echo "Built $APP (identity: $SIGN_IDENTITY)"
