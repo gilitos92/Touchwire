@@ -59,13 +59,13 @@ SIGNATURE="$(codesign -dv --verbose=2 "$APP" 2>&1)"
 
 # Submits a file to Apple's notary service and waits (usually a few minutes). Prints Apple's log when it's rejected.
 notarize() {
-    local result status id
+    local result notary_status id
     result="$(xcrun notarytool submit "$1" --keychain-profile "$NOTARY_PROFILE" --wait --output-format json)" || true
-    status="$(plutil -extract status raw -o - - <<< "$result" 2> /dev/null || true)"
+    notary_status="$(plutil -extract status raw -o - - <<< "$result" 2> /dev/null || true)"
     id="$(plutil -extract id raw -o - - <<< "$result" 2> /dev/null || true)"
-    if [[ "$status" != "Accepted" ]]; then
+    if [[ "$notary_status" != "Accepted" ]]; then
         [[ -n "$id" ]] && xcrun notarytool log "$id" --keychain-profile "$NOTARY_PROFILE" >&2 || true
-        fail "Notarization of $(basename "$1") ended with status \"${status:-unknown}\" (submission ${id:-unknown})."
+        fail "Notarization of $(basename "$1") ended with status \"${notary_status:-unknown}\" (submission ${id:-unknown})."
     fi
 }
 
