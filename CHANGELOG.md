@@ -6,6 +6,12 @@ All notable changes to Touchwire are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Touchwire is now signed with a Developer ID and notarized by Apple, so it opens without a Gatekeeper warning.
+  Because the signature changed, the old **Input Monitoring** and **Accessibility** grants no longer apply: remove
+  Touchwire from both lists and grant them again, then click **Update…** under Protection Service if it's installed.
+
 ## [1.2.1] - 2026-11-03
 
 ### Added
